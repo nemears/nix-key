@@ -14,7 +14,7 @@
                 };
             in
             {
-                packages.sharkey = pkgs.stdenv.mkDerivation rec {
+                packages.sharkey = pkgs.stdenv.mkDerivation (finalAttrs: rec {
                     pname = "sharkey";
                     version = "2024.5.1";
                     src = pkgs.fetchFromGitLab {
@@ -22,23 +22,30 @@
                         owner = "TransFem-org";
                         repo = "Sharkey";
                         rev = version;
-                        hash = "sha256-3eBMaJ4GCRVgcalCKPyUeJCNNeQrqZ2cFw0wSp/JEok=";
+			fetchSubmodules = true;
+                        hash = "sha256-7x7zT88mncxc5jy+6E4uO+7ZNSBCOrIpxY9IxGV0UxM=";
                     };
-                    pnpmDeps = pkgs.pnpm.fetchDeps{
-                        inherit pname version src;
-                        hash = "sha256-8cRTY76ATnvrhWe+Hz1iUWnvnN7Zimr7wBEsgpC1Knc=";
-                    };
-                    nativeBuildInputs = with pkgs; [ pnpm.configHook ];
-                    buildInputs = with pkgs; [ pnpm nodejs_22 typescript python3 ];
+                    pnpmDeps = pkgs.pnpm_9.fetchDeps{
+                        inherit (finalAttrs) pname version src buildInputs;
+                        hash = "";
+			postInstall = ''
+			    cd packages/frontend
+			    pnpm install --frozen-lockfile --force
+			'';
+		    };
+                    nativeBuildInputs = with pkgs; [ pnpm_9.configHook ];
+                    buildInputs = with pkgs; [ pnpm_9 nodejs_20 python3 ];
                     buildPhase = 
                         ''
-                            pnpm run build --max-old-space-size=4096
-                        '';
+			    ls -la node_modules/.pnpm/v-code-diff@1.11.0_vue@3.4.26_typescript@5.4.5_/node_modules/v-code-diff/dist 
+			    cp .config/example.yml .config/default.yml
+			    NODE_ENV=production pnpm run --stream build
+			'';
                     installPhase = 
                         ''
                             cp -r . $out
                         '';
-                };
+                });
                 packages.default = self.packages."${system}".sharkey;
             }        
         );
